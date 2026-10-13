@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kana</title>
+<style>
+:root{--bg:#0b0b14;--fg:#fff;--ac:#00e5ff;--pk:#ff3df0;--ok:#3dff8a;--bad:#ff5a5a;--card:#161628}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:22px/1.4 Verdana,Arial,sans-serif;letter-spacing:.03em}
+nav{display:flex;gap:6px;padding:8px;position:sticky;top:0;background:var(--bg)}
+nav button{flex:1;font-size:20px;padding:12px 4px;background:var(--card);color:var(--fg);border:2px solid #333;border-radius:12px}
+nav button.on{border-color:var(--ac);color:var(--ac)}
+main{max-width:520px;margin:auto;padding:12px}
+.kana{font-size:150px;text-align:center;line-height:1.1;margin:10px 0;color:#fff;text-shadow:0 0 18px var(--pk)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.b{font-size:34px;padding:22px 8px;background:var(--card);color:var(--fg);border:3px solid var(--ac);border-radius:16px;width:100%;font-family:inherit}
+.b.ok{background:var(--ok);color:#000;border-color:var(--ok)}.b.bad{background:var(--bad);color:#000;border-color:var(--bad)}
+.s{font-size:20px;padding:14px;margin:6px 0;background:var(--card);color:var(--fg);border:2px solid #555;border-radius:12px;width:100%}
+input[type=text]{font-size:36px;width:100%;padding:14px;border-radius:12px;border:3px solid var(--ac);background:#000;color:#fff;text-align:center}
+#fb{font-size:30px;text-align:center;min-height:50px;margin:10px 0}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #333}
+h2{color:var(--ac);font-size:26px;margin:14px 0 6px}
+.hidden{display:none}
+</style></head><body>
+<nav><button id="tq" class="on">Quiz</button><button id="tp">Stats</button><button id="ts">Set</button></nav>
+<main>
+<section id="q">
+ <div class="kana" id="k"></div>
+ <div id="ans"></div>
+ <div id="fb"></div>
+ <div class="grid"><button class="s" id="hear">🔊 Hear</button><button class="s" id="next">Next ▶</button></div>
+</section>
+<section id="p" class="hidden"></section>
+<section id="st" class="hidden">
+ <button class="s" id="mode"></button>
+ <button class="s" id="addrow">+ Next row</button>
+ <button class="s" id="kata"></button>
+ <button class="s" id="exp">Save file</button>
+ <button class="s" id="imp">Load file</button><input type="file" id="f" accept=".json" class="hidden">
+ <button class="s" id="rst" style="border-color:var(--bad)">Reset</button>
+</section>
+</main>
+<script>
+const H=[["a",["あa","いi","うu","えe","おo"]],["ka",["かka","きki","くku","けke","こko"]],["sa",["さsa","しshi","すsu","せse","そso"]],["ta",["たta","ちchi","つtsu","てte","とto"]],["na",["なna","にni","ぬnu","ねne","のno"]],["ha",["はha","ひhi","ふfu","へhe","ほho"]],["ma",["まma","みmi","むmu","めme","もmo"]],["ya",["やya","ゆyu","よyo"]],["ra",["らra","りri","るru","れre","ろro"]],["wa",["わwa","をwo","んn"]]];
+const K=[["a",["アa","イi","ウu","エe","オo"]],["ka",["カka","キki","クku","ケke","コko"]],["sa",["サsa","シshi","スsu","セse","ソso"]],["ta",["タta","チchi","ツtsu","テte","トto"]],["na",["ナna","ニni","ヌnu","ネne","ノno"]],["ha",["ハha","ヒhi","フfu","ヘhe","ホho"]],["ma",["マma","ミmi","ムmu","メme","モmo"]],["ya",["ヤya","ユyu","ヨyo"]],["ra",["ラra","リri","ルru","レre","ロro"]],["wa",["ワwa","ヲwo","ンn"]]];
+const sp=s=>({k:s[0],r:s.slice(1)});
+const KEY="kanaTrainerV1";const W=[0,16,8,4,2,1];
+let S=JSON.parse(localStorage.getItem(KEY)||"null")||{bins:{},h:1,k:0,kOn:false,type:false};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(S));
+const cards=()=>{let c=H.slice(0,S.h).flatMap(r=>r[1].map(sp));if(S.kOn)c=c.concat(K.slice(0,S.k).flatMap(r=>r[1].map(sp)));return c};
+const bin=k=>S.bins[k]||1;
+function ensure(){cards().forEach(c=>{if(!S.bins[c.k])S.bins[c.k]=1})}
+function autoUnlock(){
+ const rowCards=(D,n)=>D[n-1][1].map(sp);
+ if(S.h<H.length){const rc=rowCards(H,S.h);if(rc.filter(c=>bin(c.k)>=3).length/rc.length>=.8){S.h++;msg="New row!"}}
+ const allH=H.flatMap(r=>r[1].map(sp));
+ if(!S.kOn&&S.h==H.length&&allH.every(c=>bin(c.k)>=3)){S.kOn=true;S.k=1;msg="Katakana open!"}
+ if(S.kOn&&S.k>0&&S.k<K.length){const rc=rowCards(K,S.k);if(rc.filter(c=>bin(c.k)>=3).length/rc.length>=.8)S.k++}
+ ensure();save()}
+let cur=null,last=null,done=false,msg="";
+function pick(){const c=cards().filter(x=>x.k!==last);let t=0;c.forEach(x=>t+=W[bin(x.k)]);let r=Math.random()*t;for(const x of c){r-=W[bin(x.k)];if(r<=0)return x}return c[0]}
+const $=id=>document.getElementById(id);
+function show(){cur=pick();last=cur.k;done=false;$("k").textContent=cur.k;$("fb").textContent=msg;msg="";const a=$("ans");a.innerHTML="";
+ if(S.type){const i=document.createElement("input");i.type="text";i.autocapitalize="off";i.autocomplete="off";i.placeholder="type";i.onkeydown=e=>{if(e.key=="Enter")answer(i.value.trim().toLowerCase(),null)};a.appendChild(i);i.focus()}
+ else{const pool=[...new Set(cards().concat(H.flatMap(r=>r[1].map(sp))).map(x=>x.r))].filter(r=>r!==cur.r).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=pool.concat(cur.r).sort(()=>Math.random()-.5);const g=document.createElement("div");g.className="grid";
+  opts.forEach(o=>{const b=document.createElement("button");b.className="b";b.textContent=o;b.onclick=()=>answer(o,b);g.appendChild(b)});a.appendChild(g)}}
+function answer(v,btn){if(done)return;done=true;const ok=v===cur.r;
+ S.bins[cur.k]=ok?Math.min(5,bin(cur.k)+1):1;
+ if(btn){[...document.querySelectorAll(".b")].forEach(b=>{if(b.textContent===cur.r)b.classList.add("ok")});if(!ok)btn.classList.add("bad")}
+ $("fb").innerHTML=ok?'<span style="color:var(--ok)">✔ Yes! '+cur.r+'</span>':'<span style="color:var(--bad)">✘ It is: <b style="font-size:40px">'+cur.r+'</b></span>';
+ autoUnlock();if(ok)setTimeout(()=>{if(done)show()},900)}
+function hear(){if(!cur||!window.speechSynthesis)return;const u=new SpeechSynthesisUtterance(cur.k);u.lang="ja-JP";u.rate=.8;speechSynthesis.cancel();speechSynthesis.speak(u)}
+function prog(){const c=cards(),n=[0,0,0,0,0,0];c.forEach(x=>n[bin(x.k)]++);
+ let h="<h2>Boxes</h2>";for(let i=1;i<=5;i++)h+=`<div class="row"><span>Box ${i}</span><b>${n[i]}</b></div>`;
+ h+=`<h2>Rows</h2><div class="row"><span>Hiragana</span><b>${H.slice(0,S.h).map(r=>r[0]).join(" ")}</b></div><div class="row"><span>Katakana</span><b>${S.kOn?K.slice(0,S.k).map(r=>r[0]).join(" "):"🔒"}</b></div>`;$("p").innerHTML=h}
+function sets(){$("mode").textContent=S.type?"Mode: Type ⌨":"Mode: Tap 4 ▦";$("kata").textContent=S.kOn?"Katakana: ON":"Katakana: 🔒 (tap to open)"}
+function tab(t){["q","p","st"].forEach(x=>$(x).classList.toggle("hidden",x!==t));["tq","tp","ts"].forEach((x,i)=>$(x).classList.toggle("on",["q","p","st"][i]===t));if(t=="p")prog();if(t=="st")sets();if(t=="q")show()}
+$("tq").onclick=()=>tab("q");$("tp").onclick=()=>tab("p");$("ts").onclick=()=>tab("st");
+$("hear").onclick=hear;$("next").onclick=show;
+$("mode").onclick=()=>{S.type=!S.type;save();sets()};
+$("addrow").onclick=()=>{if(S.h<H.length)S.h++;else if(S.kOn&&S.k<K.length)S.k++;ensure();save();alert("Added!")};
+$("kata").onclick=()=>{if(!S.kOn&&!confirm("Open katakana now?"))return;S.kOn=!S.kOn;if(S.kOn&&!S.k)S.k=1;ensure();save();sets()};
+$("exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"}));a.download="kana-progress.json";a.click()};
+$("imp").onclick=()=>$("f").click();
+$("f").onchange=e=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.bins)throw 0;S=d;ensure();save();alert("Loaded!")}catch(x){alert("Bad file")}};r.readAsText(e.target.files[0])};
+$("rst").onclick=()=>{if(confirm("Reset ALL progress?")){localStorage.removeItem(KEY);location.reload()}};
+ensure();save();show();
+</script></body></html>
